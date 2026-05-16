@@ -33,13 +33,13 @@ The backend is available at [http://localhost/api/docs](http://localhost/api/doc
 After publishing this repo, replace `YOUR_USERNAME` in the URL with the GitHub owner:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/adbothost/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ifaz2008/adbothost/main/install.sh | bash
 ```
 
 You can also override the repo URL while testing a fork:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/adbothost/main/install.sh | REPO_URL=https://github.com/YOUR_USERNAME/adbothost.git bash
+curl -fsSL https://raw.githubusercontent.com/ifaz2008/adbothost/main/install.sh | REPO_URL=https://github.com/ifaz2008/adbothost.git bash
 ```
 
 The installer detects Debian/Ubuntu, installs Docker and the Compose plugin, clones or updates `/opt/adbothost`, writes `.env`, asks for server IP/domain, admin username, admin password, and Telegram control bot token, starts the full stack, runs initialization, seeds plans, and prints final URLs.
@@ -151,3 +151,5 @@ Compress-Archive -Path examples/node-bot/* -DestinationPath examples/node-bot.zi
 - Add AI-assisted code review via OpenRouter/OpenClaw after the deterministic scanner.
 - Enforce storage quotas at the Docker volume or filesystem driver level.
 - Add robust queueing for long-running build/deploy jobs.
+
+

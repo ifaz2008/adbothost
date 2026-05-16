@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/YOUR_USERNAME/adbothost.git}"
+REPO_URL="${REPO_URL:-https://github.com/ifaz2008/adbothost.git}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/adbothost}"
 
 need_root() {
@@ -240,3 +240,5 @@ main() {
 }
 
 main "$@"
+
+
