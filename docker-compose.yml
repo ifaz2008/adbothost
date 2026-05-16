@@ -1,0 +1,114 @@
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+      - worker
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-adbothost}
+      POSTGRES_USER: ${POSTGRES_USER:-adbothost}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-adbothost}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_SECRET: ${APP_SECRET:-local-app-secret}
+      JWT_SECRET: ${JWT_SECRET:-local-jwt-secret}
+      ADMIN_SECRET: ${ADMIN_SECRET:-local-admin-secret}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-admin-password}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@adbothost.local}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://adbothost:adbothost@db:5432/adbothost}
+      BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://backend:8000}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:5173}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost}
+      API_ROOT_PATH: ${API_ROOT_PATH:-/api}
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
+      DEFAULT_NODE_AGENT_TOKEN: ${DEFAULT_NODE_AGENT_TOKEN:-local-node-agent-token}
+      CONTROLLER_SIGNING_SECRET: ${CONTROLLER_SIGNING_SECRET:-local-controller-signing-secret}
+      WORKER_NAME: ${WORKER_NAME:-local-worker}
+      WORKER_PUBLIC_BASE_URL: ${WORKER_PUBLIC_BASE_URL:-http://worker:9000}
+      WORKER_MAX_CONTAINERS: ${WORKER_MAX_CONTAINERS:-20}
+      AD_REWARD_CREDITS: ${AD_REWARD_CREDITS:-1}
+      SCAN_MAX_FILE_MB: ${SCAN_MAX_FILE_MB:-25}
+      ALLOW_NEGATIVE_CREDITS: ${ALLOW_NEGATIVE_CREDITS:-false}
+      MANUAL_PAYMENT_ENABLED: ${MANUAL_PAYMENT_ENABLED:-true}
+      MANUAL_PAYMENT_PROVIDER_NAME: ${MANUAL_PAYMENT_PROVIDER_NAME:-Binance Pay}
+      MANUAL_PAYMENT_RECEIVER_ID: ${MANUAL_PAYMENT_RECEIVER_ID:-}
+      MANUAL_PAYMENT_INSTRUCTIONS: ${MANUAL_PAYMENT_INSTRUCTIONS:-Send payment, then submit your Binance ID and TxID.}
+      MANUAL_PAYMENT_CURRENCY: ${MANUAL_PAYMENT_CURRENCY:-USDT}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:${UPLOAD_DIR:-/app/uploads}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build: ./worker
+    restart: unless-stopped
+    environment:
+      NODE_AGENT_TOKEN: ${NODE_AGENT_TOKEN:-local-node-agent-token}
+      WORKER_NAME: ${WORKER_NAME:-local-worker}
+      WORKER_PUBLIC_BASE_URL: ${WORKER_PUBLIC_BASE_URL:-http://worker:9000}
+      WORKER_DATA_DIR: ${WORKER_DATA_DIR:-/var/lib/adbothost-worker}
+      WORKER_MAX_CONTAINERS: ${WORKER_MAX_CONTAINERS:-20}
+      WORKER_ENFORCE_STORAGE_OPT: ${WORKER_ENFORCE_STORAGE_OPT:-false}
+    ports:
+      - "9000:9000"
+    volumes:
+      - worker_data:${WORKER_DATA_DIR:-/var/lib/adbothost-worker}
+      # The worker needs Docker access on the node, but user containers never receive
+      # this socket and the backend never exposes it to users.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  telegram-bot:
+    build: ./telegram-bot
+    restart: unless-stopped
+    environment:
+      TELEGRAM_CONTROL_BOT_TOKEN: ${TELEGRAM_CONTROL_BOT_TOKEN:-}
+      TELEGRAM_BACKEND_URL: ${TELEGRAM_BACKEND_URL:-http://backend:8000}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost}
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_uploads:
+  worker_data:
+  caddy_data:
+  caddy_config:

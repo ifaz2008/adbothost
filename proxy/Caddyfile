@@ -1,0 +1,21 @@
+:80 {
+  encode gzip zstd
+
+  handle_path /api/* {
+    reverse_proxy backend:8000
+  }
+
+  handle /api {
+    rewrite * /
+    reverse_proxy backend:8000
+  }
+
+  handle /worker-health {
+    rewrite * /health
+    reverse_proxy worker:9000
+  }
+
+  handle {
+    reverse_proxy frontend:80
+  }
+}
